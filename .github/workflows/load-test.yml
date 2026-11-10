@@ -3,19 +3,19 @@ name: Load test
 on:
   workflow_dispatch:
     inputs:
+      workload:
+        description: Workload from application.conf
+        type: choice
+        options: [smoke, testLoad, baseLoad, highLoad, baseLoadOpen, highLoadOpen]
+        default: smoke
       scenario:
-        description: Scenario key from ScenarioMapping (comma-separated for several)
-        default: storeOrder
+        description: Scenario keys, comma-separated (empty = all scenarios of the workload)
+        default: ""
       env:
         description: Target environment
         type: choice
         options: [prod, test]
         default: prod
-      profile:
-        description: Load profile
-        type: choice
-        options: [smoke, load, stress, spike, soak]
-        default: smoke
 
 jobs:
   gatling:
@@ -31,15 +31,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Run Gatling
-        run: >
-          ./gradlew :load-tests:gatlingRun
-          -Dscenario=${{ inputs.scenario }}
-          -Denv=${{ inputs.env }}
-          -Dprofile=${{ inputs.profile }}
+        env:
+          WORKLOAD: ${{ inputs.workload }}
+          SCENARIO: ${{ inputs.scenario }}
+          ENV: ${{ inputs.env }}
+        run: ./gradlew :load-tests:gatlingRun
 
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gatling-report-${{ inputs.profile }}-${{ github.run_number }}
+          name: gatling-report-${{ inputs.workload }}-${{ github.run_number }}
           path: load-tests/build/reports/gatling/

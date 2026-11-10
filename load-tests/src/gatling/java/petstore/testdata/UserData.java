@@ -1,6 +1,7 @@
 package petstore.testdata;
 
 import static petstore.common.SessionKeys.EMAIL;
+import static petstore.common.SessionKeys.PASSWORD;
 import static petstore.common.SessionKeys.PHONE;
 import static petstore.common.SessionKeys.USERNAME;
 import static petstore.common.SessionKeys.USER_ID;
@@ -20,10 +21,15 @@ public final class UserData {
                 USER_ID, random.nextLong(1_000_000L, 9_000_000_000L),
                 USERNAME, "perf_user_" + suffix,
                 EMAIL, "perf_" + suffix + "@test.com",
-                PHONE, "+380" + random.nextLong(100_000_000L, 999_999_999L));
+                PHONE, "+380" + random.nextLong(100_000_000L, 999_999_999L),
+                PASSWORD, "Passw0rd!" + suffix);
     }
 
+    private static final String UPDATED_SUFFIX = "_updated";
+
     public static String updatedUsername(String username) {
-        return username + "_updated";
+        return username.endsWith(UPDATED_SUFFIX)
+                ? username.substring(0, username.length() - UPDATED_SUFFIX.length())
+                : username + UPDATED_SUFFIX;
     }
 }

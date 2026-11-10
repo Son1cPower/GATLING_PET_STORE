@@ -13,6 +13,12 @@ repositories {
     mavenCentral()
 }
 
+sourceSets {
+    named("gatling") {
+        resources.srcDir("gatling-config")
+    }
+}
+
 dependencies {
     gatlingImplementation(libs.typesafe.config)
 }

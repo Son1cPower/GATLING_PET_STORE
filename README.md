@@ -1,100 +1,161 @@
-# Gatling Pet Store
+# Performance Testing Framework
 
-Performance tests for [Swagger Pet Store](https://petstore.swagger.io) built with Gatling (Java DSL) and Gradle.
+## Overview
 
-## Stack
+Load tests for [Swagger Pet Store](https://petstore.swagger.io) built with **Gatling** (Java DSL) and **Gradle**.
+Environments, workloads and thresholds are set in config files and picked at run time.
 
-| Tool    | Version |
-|---------|---------|
-| Java    | 25 (LTS, toolchain) |
-| Gradle  | 9.9 (wrapper) |
-| Gatling | 3.16 |
+---
 
-## Run
+## Installation
+
+1. **Clone the repository.**
+
+2. **Install Java 25** (any JDK distribution, e.g. Temurin). Gradle and Gatling come with the wrapper, nothing else to install.
+
+```bash
+java -version
+```
+
+3. **Check the build:**
+
+```bash
+./gradlew :load-tests:gatlingClasses
+```
+
+> On Windows use `.\gradlew.bat` instead of `./gradlew`.
+
+---
+
+## Running Tests
+
+### Local Execution
+
+**Smoke test (every scenario once):**
 
 ```bash
 ./gradlew :load-tests:gatlingRun
-./gradlew :load-tests:gatlingRun -Dscenario=storeOrder -Dprofile=load
-./gradlew :load-tests:gatlingRun -Denv=test -Dprofile=stress -Dprofiles.stress.steps=10
 ```
 
-Report: `load-tests/build/reports/gatling/<simulation>-<timestamp>/index.html`
+**One scenario with a workload:**
 
-## Scenarios
+```bash
+./gradlew :load-tests:gatlingRun -Dworkload=testLoad -Dscenario=storeOrder
+```
 
-| Key              | Steps |
-|------------------|-------|
-| `browsePets`     | randomSwitch 33/33/33: Find available / pending / sold pets → View found pet |
-| `petLifecycle`   | Create pet (random tag from `pet_tags.csv`) → View pet → Delete pet → Check pet not exists |
-| `userLifecycle`  | Create user → View user → Update user → View user → Delete user → Check user not exists |
-| `storeOrder`     | Place order → View order |
-| `petUserStore`   | Find available/pending/sold pets → Create user → View user → Update user → View user → Delete user → Place order → View order |
+**Several scenarios in parallel:**
 
-Run several in parallel: `-Dscenario=browsePets,userLifecycle,storeOrder`.
+```bash
+./gradlew :load-tests:gatlingRun -Dworkload=baseLoad -Dscenario=browsePets,storeOrder
+```
+
+**Different environment and thresholds:**
+
+```bash
+./gradlew :load-tests:gatlingRun -Denv=test -Dworkload=baseLoad -Dthreshold=highLoad -Dscenario=browsePets,storeOrder
+```
+
+**Report:** `load-tests/build/reports/gatling/<simulation>-<timestamp>/index.html`
+**Log file:** `load-tests/build/logs/gatling.log`
+
+
+## Debug Mode
+
+HTTP logging is set with `httpLog`:
+
+**FULL DEBUG (all requests and responses with headers and body):**
+
+```bash
+./gradlew :load-tests:gatlingRun -Dscenario=storeOrder -DhttpLog=TRACE
+```
+
+**FAILED ONLY (default):**
+
+```bash
+./gradlew :load-tests:gatlingRun -Dscenario=storeOrder -DhttpLog=DEBUG
+```
+
+**OFF:**
+
+```bash
+./gradlew :load-tests:gatlingRun -Dscenario=storeOrder -DhttpLog=OFF
+```
+
+---
+
+## Environment Variables
+
+Set an option as an environment variable or as `-D<name>=<value>`. If both are set, `-D` wins.
+
+| Variable    | `-D` option  | Description                                             | Example               |
+| ----------- | ------------ | ------------------------------------------------------- | --------------------- |
+| `WORKLOAD`  | `workload`   | Load model: smoke / testLoad / baseLoad / highLoad / baseLoadOpen / highLoadOpen | `baseLoad` |
+| `SCENARIO`  | `scenario`   | Scenarios to run, comma-separated (empty = all in the workload) | `browsePets,storeOrder` |
+| `ENV`       | `env`        | Target environment: prod / test                         | `test`                |
+| `THRESHOLD` | `threshold`  | Threshold set (empty = same name as the workload)       | `highLoad`            |
+| —           | `httpLog`    | HTTP logs: DEBUG / TRACE / OFF                          | `TRACE`               |
+
+---
 
 ## Configuration
 
-All settings live in `load-tests/src/gatling/resources/application.conf` (HOCON).
-Any key can be overridden with `-D<key>=<value>`, e.g. `-Dprofiles.load.rate=20 -Dsla.p95Ms=800 -Dpause.min=1s -Dpause.max=3s`.
+All settings live in [`load-tests/gatling-config`](load-tests/gatling-config):
 
-| Key        | Env var    | Values |
-|------------|------------|--------|
-| `scenario` | `SCENARIO` | key from `ScenarioMapping`, comma-separated to run several in parallel |
-| `env`      | `ENV`      | `prod`, `test` |
-| `profile`  | `PROFILE`  | `smoke`, `load`, `stress`, `spike`, `soak` |
-| `httpLog`  | —          | `DEBUG` failed requests (default), `TRACE` all, `OFF` |
+| File                | What is inside                                         |
+| ------------------- | ------------------------------------------------------ |
+| `gatling.conf`      | Defaults: env, workload, pauses, max duration + Gatling settings |
+| `environments.conf` | Base URL and test data folder per environment          |
+| `workloads.conf`    | Load per workload and scenario                         |
+| `thresholds.conf`   | Pass / fail limits                                     |
+| `logback-test.xml`  | Logging                                                |
 
-Each environment under `environments` defines `baseUrl` and `dataDir`.
-`prod` and `test` currently share the same `baseUrl` and differ only in test data.
+### Workloads
 
-## Test data
+| Workload       | Model  | Load                                   |
+| -------------- | ------ | -------------------------------------- |
+| `smoke`        | —      | each scenario once                     |
+| `testLoad`     | closed | 1 user per scenario for 1 min          |
+| `baseLoad`     | closed | 10 users total, 1 min ramp + 10 min    |
+| `highLoad`     | closed | 20 users total, 1 min ramp + 10 min    |
+| `baseLoadOpen` | open   | 5 new users/s total, 1 min ramp + 10 min |
+| `highLoadOpen` | open   | 10 new users/s total, 1 min ramp + 10 min |
 
-Per-environment files live in `load-tests/src/gatling/resources/<dataDir>/`:
+Load for each scenario is written with Gatling steps:
 
-```
-data/
-├── prod/pet_tags.csv
-└── test/pet_tags.csv
-```
-
-```java
-feed(Feeders.csvFeeder("pet_tags.csv").random())
-```
-
-`Feeders` resolves the file from the current environment's `dataDir` and fails fast if it is missing.
-
-## Structure
-
-```
-load-tests/src/gatling/java/petstore
-├── api                      pure endpoints, one package per controller (pet, store, user)
-│   └── <controller>
-│       ├── <X>Requests      HttpRequestActionBuilder per endpoint, no checks
-│       └── enums            values used in paths, query params and checks
-├── steps                    <X>Steps: user action = group(name) over one or more requests + checks + extractors
-├── testdata                 <X>Data: generated values put into the session for body templates
-├── scenarios                user flows: scenario(name).exec(step).pause(...).exec(step), no groups
-├── simulations              LoadSimulation, ScenarioMapping, SimulationExtended
-└── common
-    ├── config               TestConfig, LoadProfile, ConfigException
-    ├── Assertions           SLA assertions
-    ├── Feeders              per-env test data
-    ├── Pauses               DEFAULT_PAUSE: random between `pause.min` and `pause.max`
-    ├── Protocols            HTTP protocol
-    └── Constants, SessionKeys
-
-load-tests/src/gatling/resources
-├── bodies                   JSON request bodies with #{sessionKey} placeholders (ElFileBody)
-└── data/<env>               per-env CSV/JSON feeders
+```hocon
+baseLoad {
+  storeOrder = [ { rampConcurrentUsers = [0, 2], during = 1m }, { constantConcurrentUsers = 2, during = 10m } ]
+}
 ```
 
-## Adding a scenario
+**Closed** = fixed number of users at the same time. **Open** = new users arriving per second.
 
-1. `resources/bodies/<name>.json` — request body template, if the endpoint has a body.
-2. `api/<controller>/<X>Requests` — endpoints (`...Rq`).
-3. `testdata/<X>Data` — generate the values the template needs, put them into the session with `session.setAll(...)`.
-4. `steps/<X>Steps` — `group(...).on(...).exitHereIfFailed()` with checks (`jsonPath`) and extracted data (`saveAs`).
-5. `scenarios/<Name>Scenario` — `scenario(name).exec(step1).pause(DEFAULT_PAUSE).exec(step2)...`.
-6. Register it in `ScenarioMapping` and run with `-Dscenario=<key>`.
+### Thresholds
 
-Request names are `METHOD /path/{param}`; Gatling prefixes them with the group path in reports.
+`default` applies to every run; a block with the workload's name overrides it.
+
+```hocon
+default {
+  global      = { p99Ms = 2000, maxFailedPercent = 1.0 }   # all requests together
+  eachRequest = { p95Ms = 2000 }                           # every request separately
+  storeOrder  = { "Place order" = { p95Ms = 1000 } }       # one business step
+}
+highLoad {
+  eachRequest = { p95Ms = 3000 }
+}
+```
+
+---
+
+## Available Test Scenarios
+
+| Scenario          | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `browsePets`      | Find available / pending / sold pets → view a found pet                  |
+| `petLifecycle`    | Create pet → view → delete → check it is gone                            |
+| `storeOrder`      | Place order → view order                                                 |
+| `userLifecycle`   | Create user → login → view → update → view → delete → check it is gone   |
+| `userSession`     | Setup: create user + login · Test: view → update → view · Teardown: delete + logout |
+| `userSessionLoop` | Like `userSession`, but the test part repeats for 1 min with one login (closed workloads only) |
+
+Scenarios that create data clean up after themselves, even when a step fails.

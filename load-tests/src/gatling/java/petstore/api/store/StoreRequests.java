@@ -23,4 +23,9 @@ public final class StoreRequests {
         return http("GET " + ORDER_PATH + "/{orderId}")
                 .get(ORDER_PATH + "/" + SessionKeys.el(orderIdKey));
     }
+
+    public static HttpRequestActionBuilder deleteOrderRq(String orderIdKey) {
+        return http("DELETE " + ORDER_PATH + "/{orderId}")
+                .delete(ORDER_PATH + "/" + SessionKeys.el(orderIdKey));
+    }
 }

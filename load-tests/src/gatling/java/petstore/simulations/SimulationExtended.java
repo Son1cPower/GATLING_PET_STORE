@@ -6,6 +6,8 @@ import io.gatling.javaapi.core.PopulationBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import petstore.common.Assertions;
@@ -15,28 +17,32 @@ public abstract class SimulationExtended extends Simulation {
 
     private static final Logger LOG = LoggerFactory.getLogger(SimulationExtended.class);
 
-    protected final void run(List<ScenarioBuilder> scenarios) {
+    protected final void run(Function<String, ScenarioBuilder> scenarios) {
         var config = testConfig();
-        var injection = config.profile().injection(config.profileSettings());
-        List<PopulationBuilder> populations = scenarios.stream()
-                .map(scenario -> scenario.injectOpen(injection))
+        List<PopulationBuilder> populations = config.scenarios().stream()
+                .map(s -> s.load().inject(scenarios.apply(s.name())))
                 .toList();
 
         setUp(populations)
                 .protocols(Protocols.petStore(config))
-                .assertions(Assertions.defaultAssertions(config.sla()))
+                .assertions(Assertions.fromThresholds(config.thresholds()))
                 .maxDuration(config.maxDuration());
     }
 
     @Override
     public void before() {
         var config = testConfig();
+        var scenarios = config.scenarios().stream()
+                .map(s -> "  %s: %s".formatted(s.name(), s.load().describe()))
+                .collect(Collectors.joining(System.lineSeparator()));
         LOG.info(
-                "Starting {} | env={} | baseUrl={} | scenario={} | profile={}",
+                "Starting {} | env={} | baseUrl={} | workload={} | thresholds={}{}{}",
                 getClass().getSimpleName(),
                 config.env(),
                 config.baseUrl(),
-                config.scenarios(),
-                config.profile().key());
+                config.workload(),
+                config.thresholds().name(),
+                System.lineSeparator(),
+                scenarios);
     }
 }

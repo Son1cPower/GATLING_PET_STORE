@@ -14,6 +14,7 @@ public final class Constants {
     public static final class Headers {
         public static final String APPLICATION_JSON = "application/json";
         public static final String USER_AGENT = "gatling-petstore-perf";
+        public static final String AUTHORIZATION = "Authorization";
 
         private Headers() {}
     }

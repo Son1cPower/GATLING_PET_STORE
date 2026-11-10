@@ -16,6 +16,12 @@ public final class SessionKeys {
     public static final String OLD_USERNAME = "oldUsername";
     public static final String EMAIL = "email";
     public static final String PHONE = "phone";
+    public static final String PASSWORD = "password";
+    public static final String AUTH_TOKEN = "authToken";
+
+    public static final String PET_CREATED = "petCreated";
+    public static final String ORDER_CREATED = "orderCreated";
+    public static final String USER_CREATED = "userCreated";
 
     private SessionKeys() {}
 

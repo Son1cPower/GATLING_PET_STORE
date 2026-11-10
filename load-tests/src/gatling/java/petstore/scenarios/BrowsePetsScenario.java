@@ -2,6 +2,7 @@ package petstore.scenarios;
 
 import static io.gatling.javaapi.core.CoreDsl.exec;
 import static io.gatling.javaapi.core.CoreDsl.percent;
+import static io.gatling.javaapi.core.CoreDsl.randomSwitch;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static petstore.api.pet.PetStatus.AVAILABLE;
 import static petstore.api.pet.PetStatus.PENDING;
@@ -11,12 +12,13 @@ import static petstore.steps.PetSteps.findPets;
 import static petstore.steps.PetSteps.viewFoundPet;
 
 import io.gatling.javaapi.core.ScenarioBuilder;
+import petstore.common.Flow;
 
 public class BrowsePetsScenario {
 
     public ScenarioBuilder browsePetsScenario() {
-        return scenario("Browse Pets")
-                .randomSwitch().on(
+        return scenario("Browse Pets").exec(Flow.failFast(
+                randomSwitch().on(
                         percent(33.4).then(
                                 exec(findPets(AVAILABLE))
                                         .pause(DEFAULT_PAUSE)
@@ -28,6 +30,6 @@ public class BrowsePetsScenario {
                         percent(33.3).then(
                                 exec(findPets(SOLD))
                                         .pause(DEFAULT_PAUSE)
-                                        .exec(viewFoundPet(SOLD))));
+                                        .exec(viewFoundPet(SOLD))))));
     }
 }
