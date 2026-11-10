@@ -1,0 +1,45 @@
+name: Load test
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Scenario key from ScenarioMapping (comma-separated for several)
+        default: storeOrder
+      env:
+        description: Target environment
+        type: choice
+        options: [prod, test]
+        default: prod
+      profile:
+        description: Load profile
+        type: choice
+        options: [smoke, load, stress, spike, soak]
+        default: smoke
+
+jobs:
+  gatling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run Gatling
+        run: >
+          ./gradlew :load-tests:gatlingRun
+          -Dscenario=${{ inputs.scenario }}
+          -Denv=${{ inputs.env }}
+          -Dprofile=${{ inputs.profile }}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gatling-report-${{ inputs.profile }}-${{ github.run_number }}
+          path: load-tests/build/reports/gatling/

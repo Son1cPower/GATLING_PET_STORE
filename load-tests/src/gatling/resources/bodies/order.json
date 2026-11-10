@@ -1,0 +1,8 @@
+{
+  "id": #{orderId},
+  "petId": #{orderPetId},
+  "quantity": #{quantity},
+  "shipDate": "#{shipDate}",
+  "status": "placed",
+  "complete": true
+}

@@ -1,0 +1,8 @@
+{
+  "id": #{petId},
+  "category": { "id": 1, "name": "Dogs" },
+  "name": "#{petName}",
+  "photoUrls": ["https://example.com/perf-pet.png"],
+  "tags": [{ "id": 1, "name": "#{tag}" }],
+  "status": "available"
+}

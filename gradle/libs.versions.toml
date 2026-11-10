@@ -1,0 +1,10 @@
+[versions]
+java = "25"
+gatling = "3.16.0"
+typesafe-config = "1.4.10"
+
+[libraries]
+typesafe-config = { module = "com.typesafe:config", version.ref = "typesafe-config" }
+
+[plugins]
+gatling = { id = "io.gatling.gradle", version.ref = "gatling" }
